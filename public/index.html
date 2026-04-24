@@ -2,7 +2,430 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lorcana Proxy</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F2F2F7; color: #1C1C1E; min-height: 100vh; }
+
+header { background: white; border-bottom: 0.5px solid #E0E0E0; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 18px; font-weight: 600; }
+header .subtitle { font-size: 13px; color: #888; }
+
+.app { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; max-width: 900px; margin: 0 auto; }
+@media (max-width: 600px) { .app { grid-template-columns: 1fr; } }
+
+.panel { background: white; border-radius: 12px; border: 0.5px solid #E0E0E0; overflow: hidden; }
+.panel-header { padding: 12px 14px; border-bottom: 0.5px solid #E8E8E8; display: flex; align-items: center; justify-content: space-between; }
+.panel-title { font-size: 14px; font-weight: 600; }
+.panel-count { font-size: 11px; color: #888; background: #F2F2F7; padding: 2px 8px; border-radius: 999px; }
+
+.search-area { padding: 10px; border-bottom: 0.5px solid #E8E8E8; }
+.search-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.search-input { flex: 1; font-size: 14px; padding: 8px 10px; border: 0.5px solid #D0D0D0; border-radius: 8px; background: #F8F8F8; outline: none; }
+.search-input:focus { border-color: #378ADD; background: white; }
+.btn-search { font-size: 13px; padding: 8px 14px; border: none; border-radius: 8px; background: #378ADD; color: white; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn-search:hover { background: #185FA5; }
+.btn-search:disabled { background: #C0C0C0; cursor: default; }
+
+.filter-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.filter-label { font-size: 10px; color: #999; font-weight: 600; min-width: 34px; text-align: right; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.3px; }
+.chips { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; flex: 1; padding-bottom: 2px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { font-size: 11px; padding: 3px 9px; border-radius: 999px; border: 0.5px solid #D8D8D8; background: #F8F8F8; color: #555; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.12s; }
+.chip:hover { border-color: #378ADD; color: #185FA5; }
+.chip.active { background: #EAF3FB; border-color: #378ADD; color: #0C447C; font-weight: 500; }
+
+.results { overflow-y: auto; max-height: 400px; }
+.result-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 0.5px solid #F0F0F0; }
+.result-item:last-child { border-bottom: none; }
+.ink-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.result-info { flex: 1; min-width: 0; }
+.result-name { font-size: 13px; font-weight: 500; color: #1C1C1E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result-sub { font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.add-btn { width: 26px; height: 26px; border-radius: 50%; border: 0.5px solid #D0D0D0; background: white; color: #378ADD; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; line-height: 1; transition: all 0.1s; }
+.add-btn:hover { background: #EAF3FB; border-color: #378ADD; }
+.qty-ctrl { display: flex; align-items: center; gap: 5px; }
+.qty-btn { width: 22px; height: 22px; border-radius: 50%; border: 0.5px solid #D0D0D0; background: #F2F2F7; color: #333; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.qty-btn:hover { background: #E0E0E0; }
+.qty-num { font-size: 13px; font-weight: 600; min-width: 16px; text-align: center; }
+
+.empty-state { padding: 36px 20px; text-align: center; color: #B0B0B0; font-size: 13px; line-height: 1.7; }
+.loading { padding: 28px; text-align: center; color: #888; font-size: 13px; }
+.error-msg { padding: 16px; text-align: center; color: #C02929; font-size: 13px; }
+
+.print-list { overflow-y: auto; max-height: 460px; }
+.print-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 0.5px solid #F0F0F0; }
+.print-item:last-child { border-bottom: none; }
+.print-item-ink { width: 3px; height: 34px; border-radius: 2px; flex-shrink: 0; }
+.print-item-info { flex: 1; min-width: 0; }
+.print-item-name { font-size: 13px; font-weight: 500; color: #1C1C1E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.print-item-sub { font-size: 11px; color: #888; margin-top: 1px; }
+.remove-btn { width: 22px; height: 22px; border-radius: 50%; border: none; background: none; color: #C0C0C0; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: color 0.1s; }
+.remove-btn:hover { color: #C02929; }
+
+.panel-footer { padding: 10px 12px; border-top: 0.5px solid #E8E8E8; display: flex; gap: 8px; }
+.btn-print { flex: 1; font-size: 13px; padding: 9px; border: none; border-radius: 8px; background: #378ADD; color: white; cursor: pointer; font-weight: 500; }
+.btn-print:hover { background: #185FA5; }
+.btn-print:disabled { background: #C8C8C8; cursor: default; }
+.btn-clear { font-size: 13px; padding: 9px 14px; border: 0.5px solid #D0D0D0; border-radius: 8px; background: white; color: #888; cursor: pointer; }
+.btn-clear:hover { color: #C02929; border-color: #F09595; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Lorcana Proxy</h1>
+    <div class="subtitle">Search · Add · Print</div>
+  </div>
+</header>
+
+<div class="app">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Search</span>
+      <span class="panel-count" id="result-count">0 results</span>
+    </div>
+    <div class="search-area">
+      <div class="search-row">
+        <input class="search-input" id="search-input" placeholder="Card name..." autocomplete="off"/>
+        <button class="btn-search" id="search-btn" onclick="doSearch()">Search</button>
+      </div>
+      <div class="filter-row"><span class="filter-label">Ink</span><div class="chips" id="ink-chips"></div></div>
+      <div class="filter-row"><span class="filter-label">Type</span><div class="chips" id="type-chips"></div></div>
+      <div class="filter-row"><span class="filter-label">Class</span><div class="chips" id="class-chips"></div></div>
+      <div class="filter-row"><span class="filter-label">Rarity</span><div class="chips" id="rarity-chips"></div></div>
+    </div>
+    <div class="results" id="results-area">
+      <div class="empty-state">Search by name or use filters above</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Print list</span>
+      <span class="panel-count" id="deck-count">0 cards</span>
+    </div>
+    <div class="print-list" id="print-list">
+      <div class="empty-state">Add cards from search to build your proxy sheet</div>
+    </div>
+    <div class="panel-footer">
+      <button class="btn-print" id="print-btn" onclick="printProxies()" disabled>Print proxies</button>
+      <button class="btn-clear" onclick="clearDeck()">Clear all</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const INK_COLORS = {
+  Amber:'#C97A10', Amethyst:'#7B4DB0', Emerald:'#1A7A4A',
+  Ruby:'#C02929', Sapphire:'#1A5FA8', Steel:'#4A5468', Unknown:'#888'
+};
+const INK_LIGHT = {
+  Amber:'#FDE8B0', Amethyst:'#D9C8F0', Emerald:'#A8DFC0',
+  Ruby:'#F5B8B8', Sapphire:'#B0CCEE', Steel:'#C4CAD4', Unknown:'#E8E8E8'
+};
+const FILTERS = {
+  ink: [
+    {label:'Amber',q:'i:amber'},{label:'Amethyst',q:'i:amethyst'},
+    {label:'Emerald',q:'i:emerald'},{label:'Ruby',q:'i:ruby'},
+    {label:'Sapphire',q:'i:sapphire'},{label:'Steel',q:'i:steel'}
+  ],
+  type: [
+    {label:'Character',q:'t:character'},{label:'Action',q:'t:action'},
+    {label:'Item',q:'t:item'},{label:'Song',q:'t:song'},{label:'Location',q:'t:location'}
+  ],
+  class: [
+    {label:'Hero',q:'t:hero'},{label:'Villain',q:'t:villain'},{label:'Princess',q:'t:princess'},
+    {label:'Storyborn',q:'t:storyborn'},{label:'Floodborn',q:'t:floodborn'},
+    {label:'Dreamborn',q:'t:dreamborn'},{label:'Pirate',q:'t:pirate'},
+    {label:'Sorcerer',q:'t:sorcerer'},{label:'Inventor',q:'t:inventor'},
+    {label:'Toy',q:'t:toy'},{label:'Fairy',q:'t:fairy'},{label:'Knight',q:'t:knight'}
+  ],
+  rarity: [
+    {label:'Common',q:'r:common'},{label:'Uncommon',q:'r:uncommon'},
+    {label:'Rare',q:'r:rare'},{label:'Super Rare',q:'r:super_rare'},
+    {label:'Legendary',q:'r:legendary'},{label:'Enchanted',q:'r:enchanted'}
+  ]
+};
+
+let active = new Set(), deck = [], results = [], quantities = {};
+
+function initChips() {
+  for (const [group, chips] of Object.entries(FILTERS)) {
+    const el = document.getElementById(group + '-chips');
+    chips.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'chip';
+      btn.textContent = c.label;
+      btn.onclick = () => { btn.classList.toggle('active'); active.has(c.q) ? active.delete(c.q) : active.add(c.q); };
+      el.appendChild(btn);
+    });
+  }
+}
+
+async function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  const filters = [...active].join(' ');
+  const combined = [q, filters].filter(Boolean).join(' ');
+  if (!combined) return;
+  const area = document.getElementById('results-area');
+  area.innerHTML = '<div class="loading">Searching...</div>';
+  document.getElementById('result-count').textContent = '...';
+  try {
+    const resp = await fetch(`/api/search?q=${encodeURIComponent(combined)}`);
+    const data = await resp.json();
+    results = (data.results || []).sort((a,b) => (parseInt(b.set?.code)||0) - (parseInt(a.set?.code)||0));
+    renderResults();
+  } catch(e) {
+    area.innerHTML = '<div class="error-msg">Could not reach the API. Please try again.</div>';
+    document.getElementById('result-count').textContent = 'error';
+  }
+}
+
+function renderResults() {
+  const area = document.getElementById('results-area');
+  document.getElementById('result-count').textContent = results.length + ' results';
+  if (!results.length) { area.innerHTML = '<div class="empty-state">No cards found</div>'; return; }
+  area.innerHTML = '';
+  results.forEach((card, i) => {
+    const ink = card.ink || 'Unknown';
+    const color = INK_COLORS[ink] || '#888';
+    const qty = quantities[card.id] || 0;
+    const row = document.createElement('div');
+    row.className = 'result-item';
+    row.innerHTML = `
+      <div class="ink-dot" style="background:${color}"></div>
+      <div class="result-info">
+        <div class="result-name">${esc(card.name)}${card.version ? ' – ' + esc(card.version) : ''}</div>
+        <div class="result-sub">${esc(ink)} · ${esc(Array.isArray(card.type)?card.type.join(' · '):card.type||'')} · ${esc(card.set?.name||'')} · Cost ${card.cost??''}</div>
+      </div>
+      <div id="ctrl-${card.id}">${renderCtrl(i, qty)}</div>`;
+    area.appendChild(row);
+  });
+}
+
+function renderCtrl(i, qty) {
+  if (qty === 0) return `<button class="add-btn" onclick="addCard(${i})">+</button>`;
+  return `<div class="qty-ctrl">
+    <button class="qty-btn" onclick="changeQty(${i},-1)">−</button>
+    <span class="qty-num">${qty}</span>
+    <button class="qty-btn" onclick="changeQty(${i},1)">+</button>
+  </div>`;
+}
+
+function refreshCtrl(i) {
+  const card = results[i];
+  const el = document.getElementById('ctrl-' + card.id);
+  if (el) el.innerHTML = renderCtrl(i, quantities[card.id] || 0);
+}
+
+function addCard(i) {
+  const card = results[i];
+  quantities[card.id] = 1;
+  if (!deck.find(c => c.id === card.id)) deck.push({...card});
+  refreshCtrl(i); renderDeck();
+}
+
+function changeQty(i, delta) {
+  const card = results[i];
+  const next = (quantities[card.id] || 0) + delta;
+  if (next <= 0) { delete quantities[card.id]; deck = deck.filter(c => c.id !== card.id); }
+  else { quantities[card.id] = next; if (!deck.find(c => c.id === card.id)) deck.push({...card}); }
+  refreshCtrl(i); renderDeck();
+}
+
+function removeFromDeck(id) {
+  delete quantities[id];
+  deck = deck.filter(c => c.id !== id);
+  renderResults(); renderDeck();
+}
+
+function clearDeck() {
+  deck = []; quantities = {};
+  renderResults(); renderDeck();
+}
+
+function renderDeck() {
+  const list = document.getElementById('print-list');
+  const count = deck.reduce((s, c) => s + (quantities[c.id] || 1), 0);
+  document.getElementById('deck-count').textContent = count + ' card' + (count !== 1 ? 's' : '');
+  document.getElementById('print-btn').disabled = deck.length === 0;
+  if (!deck.length) { list.innerHTML = '<div class="empty-state">Add cards from search to build your proxy sheet</div>'; return; }
+  list.innerHTML = '';
+  deck.forEach(card => {
+    const ink = card.ink || 'Unknown';
+    const qty = quantities[card.id] || 1;
+    const row = document.createElement('div');
+    row.className = 'print-item';
+    row.innerHTML = `
+      <div class="print-item-ink" style="background:${INK_COLORS[ink]||'#888'}"></div>
+      <div class="print-item-info">
+        <div class="print-item-name">${esc(card.name)}${card.version?' – '+esc(card.version):''} ${qty>1?'×'+qty:''}</div>
+        <div class="print-item-sub">${esc(ink)} · Cost ${card.cost??''} · ${esc(card.set?.name||'')}</div>
+      </div>
+      <button class="remove-btn" onclick="removeFromDeck('${card.id}')">×</button>`;
+    list.appendChild(row);
+  });
+}
+
+function printProxies() {
+  const allCards = [];
+  deck.forEach(card => { for (let i = 0; i < (quantities[card.id]||1); i++) allCards.push(card); });
+
+  const PW = 8.5, PH = 11;        // inches
+  const CW = 2.48, CH = 3.46;    // inches — slightly under 2.5x3.5
+  const COLS = 3, ROWS = 3;
+  const marginX = (PW - COLS * CW) / 2;
+  const marginY = (PH - ROWS * CH) / 2;
+
+  let pages = [];
+  for (let p = 0; p < Math.ceil(allCards.length / 9); p++) {
+    const batch = allCards.slice(p * 9, p * 9 + 9);
+    let svg = '';
+
+    // Cut lines
+    for (let c = 0; c <= COLS; c++) { const cx = marginX + c * CW; svg += `<line x1="${cx}" y1="0" x2="${cx}" y2="${PH}" stroke="#CCCCCC" stroke-width="0.005" stroke-dasharray="0.05,0.05"/>`; }
+    for (let r = 0; r <= ROWS; r++) { const ry = marginY + r * CH; svg += `<line x1="0" y1="${ry}" x2="${PW}" y2="${ry}" stroke="#CCCCCC" stroke-width="0.005" stroke-dasharray="0.05,0.05"/>`; }
+
+    batch.forEach((card, idx) => {
+      const col = idx % COLS, row = Math.floor(idx / COLS);
+      const x = marginX + col * CW, y = marginY + row * CH;
+      const ink = card.ink || 'Unknown';
+      const primary = INK_COLORS[ink] || '#888';
+      const light = INK_LIGHT[ink] || '#EEE';
+      const artH = CH * 0.42, bannerH = CH * 0.12, classH = CH * 0.065, footerH = CH * 0.065;
+      const bodyH = CH - artH - bannerH - classH - footerH;
+      const by = y + artH, cy2 = by + bannerH, ty = cy2 + classH, fy = ty + bodyH;
+      const isChar = card.strength != null;
+      const lore = card.lore || 0;
+      const cls = Array.isArray(card.classifications) ? card.classifications.join(' · ') : '';
+      const artist = Array.isArray(card.illustrators) ? (card.illustrators[0]||'') : '';
+
+      const nameLines = wrapText((card.name||'').toUpperCase(), CW - 0.24, 0.13);
+      const nameBlockH = nameLines.length * 0.15 + (card.version ? 0.14 : 0);
+      let nameY = y + artH/2 - nameBlockH/2;
+
+      const bodyLines = wrapTextBody(card.text || '', CW - 0.16, 0.075);
+      const flavorLines = wrapText(card.flavor_text || '', CW - 0.16, 0.072);
+
+      let bodyTextSVG = '', bty = ty + 0.06;
+      bodyLines.forEach(({text, bold}) => {
+        const fw = bold ? 'bold' : 'normal';
+        bodyTextSVG += `<text x="${x+0.06}" y="${bty}" font-size="0.075" fill="#222" font-family="Georgia,serif" font-weight="${fw}">${esc(text)}</text>`;
+        bty += 0.1;
+      });
+      if (card.flavor_text && bodyLines.length) {
+        bodyTextSVG += `<line x1="${x+0.06}" y1="${bty+0.01}" x2="${x+CW-0.06}" y2="${bty+0.01}" stroke="#CCC" stroke-width="0.006"/>`;
+        bty += 0.06;
+        flavorLines.forEach(line => {
+          bodyTextSVG += `<text x="${x+0.06}" y="${bty}" font-size="0.072" fill="#555" font-family="Georgia,serif" font-style="italic">${esc(line)}</text>`;
+          bty += 0.095;
+        });
+      }
+
+      const rarity = (card.rarity||'common').toLowerCase().replace('_',' ');
+      const rc = {x: x+CW/2, y: fy+footerH/2}, rr = 0.058;
+      let rarityShape = '';
+      if (rarity==='common') rarityShape=`<circle cx="${rc.x}" cy="${rc.y}" r="${rr}" fill="#B0AEA8" stroke="#888" stroke-width="0.007"/>`;
+      else if (rarity==='uncommon') rarityShape=`<polygon points="${rc.x},${rc.y-rr} ${rc.x+rr*0.866},${rc.y+rr*0.5} ${rc.x-rr*0.866},${rc.y+rr*0.5}" fill="#C0BEB6" stroke="#888" stroke-width="0.007"/>`;
+      else if (rarity==='rare') rarityShape=`<polygon points="${rc.x},${rc.y-rr} ${rc.x+rr*0.866},${rc.y+rr*0.5} ${rc.x-rr*0.866},${rc.y+rr*0.5}" fill="#B87830" stroke="#7A4E18" stroke-width="0.007"/>`;
+      else if (rarity.includes('super')) rarityShape=`<polygon points="${rc.x},${rc.y-rr} ${rc.x+rr*0.7},${rc.y} ${rc.x},${rc.y+rr} ${rc.x-rr*0.7},${rc.y}" fill="#A8A8B2" stroke="#686870" stroke-width="0.007"/>`;
+      else if (rarity==='legendary'){let pts='';for(let k=0;k<5;k++){const a=k*2*Math.PI/5-Math.PI/2;pts+=`${rc.x+rr*Math.cos(a)},${rc.y+rr*Math.sin(a)} `;}rarityShape=`<polygon points="${pts.trim()}" fill="#D4A810" stroke="#8A6A00" stroke-width="0.007"/>`;}
+      else rarityShape=`<circle cx="${rc.x}" cy="${rc.y}" r="${rr}" fill="#8844CC" stroke="#5522AA" stroke-width="0.007"/>`;
+
+      let loreStr = '◆ '.repeat(Math.min(lore,4)).trim();
+
+      svg += `
+        <rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="0.07" fill="white" stroke="#CCCCCC" stroke-width="0.009"/>
+        <rect x="${x}" y="${by}" width="${CW}" height="${bannerH}" fill="${light}"/>
+        <line x1="${x}" y1="${cy2}" x2="${x+CW}" y2="${cy2}" stroke="#E0E0E0" stroke-width="0.005"/>
+        <line x1="${x}" y1="${ty}" x2="${x+CW}" y2="${ty}" stroke="#E0E0E0" stroke-width="0.005"/>
+        <line x1="${x}" y1="${fy}" x2="${x+CW}" y2="${fy}" stroke="#E0E0E0" stroke-width="0.005"/>
+        ${nameLines.map((ln,i)=>`<text x="${x+CW/2}" y="${nameY+i*0.15+0.12}" text-anchor="middle" font-size="0.13" font-weight="bold" fill="#111" font-family="Arial,sans-serif">${esc(ln)}</text>`).join('')}
+        ${card.version?`<text x="${x+CW/2}" y="${nameY+nameLines.length*0.15+0.11}" text-anchor="middle" font-size="0.09" fill="#444" font-family="Arial,sans-serif">${esc(card.version)}</text>`:''}
+        <polygon points="${x+0.16},${y+0.11} ${x+0.23},${y+0.08} ${x+0.30},${y+0.11} ${x+0.30},${y+0.20} ${x+0.23},${y+0.23} ${x+0.16},${y+0.20}" fill="none" stroke="${primary}" stroke-width="0.014"/>
+        <text x="${x+0.23}" y="${y+0.175}" text-anchor="middle" font-size="0.09" font-weight="bold" fill="${primary}" font-family="Arial,sans-serif">${card.cost??''}</text>
+        <text x="${x+0.06}" y="${cy2+classH*0.72}" font-size="0.063" font-weight="bold" fill="#555" font-family="Arial,sans-serif">${esc(ink)}</text>
+        <text x="${x+CW/2}" y="${cy2+classH*0.72}" text-anchor="middle" font-size="0.063" fill="#555" font-family="Arial,sans-serif">${esc(cls)}</text>
+        ${isChar?`
+          <path d="M${x+CW-0.33},${by+0.02} L${x+CW-0.15},${by+0.02} L${x+CW-0.15},${by+bannerH*0.65} Q${x+CW-0.15},${by+bannerH-0.02} ${x+CW-0.24},${by+bannerH-0.01} Q${x+CW-0.33},${by+bannerH-0.02} ${x+CW-0.33},${by+bannerH*0.65} Z" fill="white" stroke="${primary}" stroke-width="0.012"/>
+          <text x="${x+CW-0.24}" y="${by+bannerH*0.65}" text-anchor="middle" font-size="0.09" font-weight="bold" fill="#111" font-family="Arial,sans-serif">${card.willpower??''}</text>
+          <circle cx="${x+CW-0.46}" cy="${by+bannerH/2}" r="0.09" fill="none" stroke="${primary}" stroke-width="0.012"/>
+          <text x="${x+CW-0.46}" y="${by+bannerH/2+0.033}" text-anchor="middle" font-size="0.09" font-weight="bold" fill="#111" font-family="Arial,sans-serif">${card.strength??''}</text>
+          ${lore>0?`<text x="${x+CW-0.06}" y="${fy-0.04}" text-anchor="end" font-size="0.09" fill="${primary}" font-family="Arial,sans-serif">${esc(loreStr)}</text>`:''}
+        `:''}
+        ${bodyTextSVG}
+        ${rarityShape}
+        <text x="${x+0.05}" y="${fy+footerH*0.38}" font-size="0.052" fill="#999" font-family="Arial,sans-serif">${esc(artist)}</text>
+        <text x="${x+0.05}" y="${fy+footerH*0.78}" font-size="0.052" fill="#999" font-family="Arial,sans-serif">${esc(card.set?.code||'')} · ${esc(card.collector_number||'')}</text>
+        <text x="${x+CW-0.05}" y="${fy+footerH*0.6}" text-anchor="end" font-size="0.052" fill="#999" font-family="Arial,sans-serif">${esc(card.set?.name||'')}</text>
+      `;
+    });
+
+    pages.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${PW} ${PH}">${svg}</svg>`);
+  }
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Lorcana Proxies</title>
+  <style>
+    body{margin:0;background:#888;font-family:sans-serif}
+    .print-btn{position:fixed;top:12px;right:12px;padding:8px 18px;background:#378ADD;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;z-index:999}
+    .print-btn:hover{background:#185FA5}
+    .page-wrap{width:8.5in;height:11in;margin:16px auto;background:white;box-shadow:0 2px 12px rgba(0,0,0,0.25);display:block;overflow:hidden}
+    svg{width:8.5in;height:11in;display:block}
+    @media print{
+      body{margin:0;background:white}
+      .print-btn{display:none}
+      .page-wrap{margin:0;box-shadow:none;page-break-after:always;width:8.5in;height:11in}
+    }
+    @page{size:8.5in 11in;margin:0}
+  </style>
+  </head><body><button class="print-btn" onclick="window.print()">Print / Save PDF</button>${pages.map(p=>`<div class="page-wrap">${p}</div>`).join('')}</body></html>`);
+  win.document.close();
+}
+
+function wrapText(text, maxW, fontSize) {
+  if (!text) return [];
+  const cpl = Math.floor(maxW / (fontSize * 0.6));
+  const lines = [], words = text.split(' ');
+  let cur = '';
+  words.forEach(w => { const test = (cur+' '+w).trim(); if (test.length > cpl && cur) { lines.push(cur); cur = w; } else cur = test; });
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function wrapTextBody(text, maxW, fontSize) {
+  if (!text) return [];
+  const cpl = Math.floor(maxW / (fontSize * 0.58));
+  const out = [];
+  text.split('\n').forEach(para => {
+    if (!para.trim()) return;
+    const isBold = para === para.toUpperCase() && para.length > 2 && !para.includes('{');
+    const words = para.split(' ');
+    let cur = '';
+    words.forEach(w => { const test = (cur+' '+w).trim(); if (test.length > cpl && cur) { out.push({text:cur,bold:isBold}); cur=w; } else cur=test; });
+    if (cur) out.push({text:cur, bold:isBold});
+    out.push({text:'', bold:false});
+  });
+  while (out.length && !out[out.length-1].text) out.pop();
+  return out;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+document.getElementById('search-input').addEventListener('keydown', e => { if (e.key==='Enter') doSearch(); });
+initChips();
+renderDeck();
+</script>
+</body>
+</html>
+
 <title>Lorcana Proxy</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
